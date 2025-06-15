@@ -4,16 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>科技博客主页</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
       background: #f9f9fb;
-      overflow-x: hidden;
     }
 
-    /* 背景彩带 */
-    .ribbons {
+        /* 背景彩带 */
+        .ribbons {
       position: fixed;
       top: 0;
       left: 0;
@@ -39,7 +39,7 @@
       top: 10%;
       left: -400px;
       background: linear-gradient(135deg, #ff4081, #ff9800);
-      animation-delay: 0s;
+      animation-delay: 1s;
     }
 
     .ribbon:nth-child(2) {
@@ -88,8 +88,6 @@
     .container {
       display: flex;
       min-height: 100vh;
-      position: relative;
-      z-index: 1;
     }
 
     .left-panel {
@@ -98,9 +96,6 @@
       padding: 2rem;
       text-align: center;
       box-shadow: 2px 0 10px rgba(0,0,0,0.05);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
     }
 
     .left-panel img {
@@ -109,7 +104,6 @@
       border-radius: 50%;
       border: 3px solid #00bcd4;
       object-fit: cover;
-      margin: 0 auto;
     }
 
     .left-panel .name {
@@ -128,7 +122,6 @@
       font-size: 1.2rem;
       color: #333;
       font-weight: bold;
-      text-align: center;
     }
 
     .right-panel {
@@ -140,10 +133,10 @@
     }
 
     .post-card {
-      width: 30rem;
+      width: 28rem;
       background: #ffffff;
-      padding: 2rem;
-      margin-bottom: 2rem; /* 增加垂直间隔 */
+      padding: 1.5rem;
+      margin: 1rem;
       border-radius: 8px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
       transition: transform 0.2s;
@@ -161,35 +154,17 @@
     }
 
     .post-card p {
-      margin: 0.5rem 0 0;
+      margin: 0.5rem 0;
       color: #555;
       font-size: 0.95rem;
     }
 
-    .add-form {
+    .thumbnail {
+      margin-top: 0.8rem;
+      max-height: 150px;
+      border-radius: 6px;
       width: 100%;
-      margin-top: 2rem;
-    }
-
-    input, textarea {
-      padding: 0.5rem;
-      width: 70%;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      margin-right: 0.5rem;
-    }
-
-    button {
-      padding: 0.5rem 1rem;
-      background: #00bcd4;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #0097a7;
+      object-fit: cover;
     }
 
     .modal {
@@ -208,8 +183,20 @@
       background: #fff;
       padding: 2rem;
       border-radius: 8px;
-      max-width: 600px;
+      max-width: 800px;
       width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-content h3 {
+      color: #00bcd4;
+    }
+
+    .modal-content img {
+      max-width: 100%;
+      border-radius: 6px;
+      margin-top: 1rem;
     }
   </style>
 </head>
@@ -224,69 +211,60 @@
 
   <div class="container">
     <div class="left-panel">
-      <div>
-        <img src="myavatar.jpg" alt="头像" />
-        <div class="name">ZX</div>
-        <div class="bio">君子坐而论道，少年起而行之</div>
-      </div>
+      <img src="myavatar.jpg" alt="头像" />
+      <div class="name">ZX</div>
+      <div class="bio">君子坐而论道，少年起而行之</div>
       <div class="clock" id="clock">--:--:--</div>
     </div>
 
-    <div class="right-panel">
-      <div id="posts"></div>
-    </div>
+    <div class="right-panel" id="posts"></div>
   </div>
 
   <div class="modal" id="modal">
     <div class="modal-content">
       <h3 id="modalTitle"></h3>
-      <p id="modalContent"></p>
+      <div id="modalContent"></div>
     </div>
   </div>
 
   <script>
-    let posts = JSON.parse(localStorage.getItem("posts") || "[]");
+    function updateClock() {
+      const now = new Date();
+      document.getElementById("clock").innerText = now.toLocaleTimeString();
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    const posts = JSON.parse(localStorage.getItem("posts") || "[]");
 
     function renderPosts() {
       const container = document.getElementById("posts");
-      container.innerHTML = '';
-      posts.forEach((p, i) => {
+      container.innerHTML = "";
+      posts.forEach(post => {
         const card = document.createElement("div");
         card.className = "post-card";
-        card.innerHTML = `<h3>${p.title}</h3><p>${p.content.slice(0, 100)}...</p>`;
-        card.onclick = () => showModal(p.title, p.content);
+        card.innerHTML = `
+          <h3>${post.title}</h3>
+          <p>${post.content.slice(0, 80)}...</p>
+          ${post.images?.length ? `<img src="${post.images[0]}" class="thumbnail">` : ''}
+        `;
+        card.onclick = () => showModal(post.title, post.content, post.images);
         container.appendChild(card);
       });
     }
 
-    function addPost() {
-      const title = document.getElementById("title").value.trim();
-      const content = document.getElementById("content").value.trim();
-      if (!title || !content) return alert("请填写标题和内容！");
-      posts.unshift({ title, content });
-      localStorage.setItem("posts", JSON.stringify(posts));
-      renderPosts();
-      document.getElementById("title").value = '';
-      document.getElementById("content").value = '';
-    }
-
-    function showModal(title, content) {
+    function showModal(title, markdown, images = []) {
       document.getElementById("modalTitle").innerText = title;
-      document.getElementById("modalContent").innerText = content;
+      document.getElementById("modalContent").innerHTML = marked.parse(markdown) +
+        (images.map(src => `<img src="${src}" />`).join(''));
       document.getElementById("modal").style.display = "flex";
     }
 
-    window.onclick = (e) => {
-      if (e.target.id === "modal") document.getElementById("modal").style.display = "none";
+    window.onclick = e => {
+      if (e.target.id === "modal") {
+        document.getElementById("modal").style.display = "none";
+      }
     };
-
-    function updateClock() {
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString();
-      document.getElementById("clock").innerText = timeStr;
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
 
     renderPosts();
   </script>
