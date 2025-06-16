@@ -1,38 +1,31 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <title>写博客</title>
+  <meta charset="UTF-8" />
+  <title>博客管理（GitHub API 版）</title>
   <style>
     body {
       font-family: sans-serif;
       padding: 2rem;
       background: #f4f6f9;
     }
-
-    h2 {
-      color: #00bcd4;
-    }
-
+    h2 { color: #00bcd4; }
     input, textarea {
       width: 100%;
       margin-bottom: 1rem;
       padding: 0.5rem;
       font-size: 1rem;
     }
-
     .preview {
       display: flex;
       gap: 1rem;
       flex-wrap: wrap;
       margin-bottom: 1rem;
     }
-
     .preview img {
       max-height: 80px;
       border-radius: 4px;
     }
-
     button {
       padding: 0.5rem 1rem;
       background: #00bcd4;
@@ -43,17 +36,12 @@
       cursor: pointer;
       margin-right: 0.5rem;
     }
-
-    button:hover {
-      background: #0097a7;
-    }
-
+    button:hover { background: #0097a7; }
     .existing-posts {
       margin-top: 2rem;
       border-top: 2px solid #ddd;
       padding-top: 1rem;
     }
-
     .post-item {
       display: flex;
       justify-content: space-between;
@@ -64,29 +52,50 @@
       border-radius: 4px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.05);
     }
-
     .post-title {
       flex: 1;
       font-size: 1rem;
       color: #333;
     }
-
     .delete-btn {
       background: #f44336;
     }
-
     .delete-btn:hover {
       background: #d32f2f;
+    }
+    .edit-btn {
+      background: #ff9800;
+      margin-right: 0.5rem;
+    }
+    .edit-btn:hover {
+      background: #f57c00;
+    }
+    .action-buttons {
+      display: flex;
+    }
+    .form-container {
+      background: #fff;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+    .form-title {
+      margin-top: 0;
+      color: #00bcd4;
     }
   </style>
 </head>
 <body>
-  <h2>发布新博客</h2>
-  <input id="title" placeholder="博客标题" />
-  <textarea id="content" rows="10" placeholder="支持 Markdown 格式的正文内容"></textarea>
-  <input type="file" id="imgUpload" multiple accept="image/*" />
-  <div class="preview" id="imgPreview"></div>
-  <button onclick="submitPost()">发布</button>
+  <div class="form-container">
+    <h2 class="form-title" id="formTitle">发布新博客</h2>
+    <input id="title" placeholder="博客标题" />
+    <textarea id="content" rows="10" placeholder="支持 Markdown 格式的正文内容"></textarea>
+    <input type="file" id="imgUpload" multiple accept="image/*" />
+    <div class="preview" id="imgPreview"></div>
+    <button onclick="submitPost()" id="submitBtn">发布</button>
+    <button onclick="cancelEdit()" id="cancelBtn" style="display:none;">取消编辑</button>
+  </div>
 
   <div class="existing-posts">
     <h2>已发布的博客</h2>
@@ -94,8 +103,19 @@
   </div>
 
   <script>
-    const images = [];
+    // --- 配置部分，替换成你自己的仓库和Token ---
+    const GITHUB_TOKEN = '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'; // 你的 GitHub Token，务必保密！
+    const OWNER = 'ccczzzxx';
+    const REPO = 'ccczzzxx.github.io';
+    const FILE_PATH = 'posts.json';
+    const BRANCH = 'main'; // 你的仓库分支名
 
+    let posts = [];
+    let currentSha = null; // 用于更新文件时必须提供最新
+    const images = [];
+    let editingIndex = -1; // 当前编辑的博客索引，-1表示新增
+
+    // 监听图片上传
     document.getElementById("imgUpload").addEventListener("change", function () {
       const preview = document.getElementById("imgPreview");
       preview.innerHTML = "";
@@ -104,17 +124,57 @@
       Array.from(this.files).forEach(file => {
         const reader = new FileReader();
         reader.onload = e => {
-          const base64 = e.target.result;
-          images.push(base64);
+          images.push(e.target.result);
           const img = document.createElement("img");
-          img.src = base64;
+          img.src = e.target.result;
           preview.appendChild(img);
         };
         reader.readAsDataURL(file);
       });
     });
 
-    function submitPost() {
+    // GitHub API 请求辅助函数
+    async function githubRequest(path, method = 'GET', body = null) {
+      const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`;
+      const headers = {
+        "Authorization": `token ${GITHUB_TOKEN}`,
+        "Accept": "application/vnd.github+json",
+      };
+      const options = { method, headers };
+      if (body) {
+        options.body = JSON.stringify(body);
+      }
+      const resp = await fetch(url, options);
+      if (!resp.ok) {
+        const errText = await resp.text();
+        throw new Error(`GitHub API 错误: ${resp.status} ${resp.statusText} - ${errText}`);
+      }
+      return resp.json();
+    }
+
+    // 载入 posts.json
+    async function loadPosts() {
+      try {
+        const data = await githubRequest(FILE_PATH);
+        currentSha = data.sha;
+        const content = atob(data.content.replace(/\s/g, ''));
+        posts = JSON.parse(content);
+        renderPosts();
+      } catch (err) {
+        // 如果文件不存在，创建一个空数组
+        if (err.message.includes("404")) {
+          posts = [];
+          currentSha = null;
+          renderPosts();
+        } else {
+          alert("加载博客列表失败：" + err.message);
+          console.error(err);
+        }
+      }
+    }
+
+    // 提交新博客或更新现有博客
+    async function submitPost() {
       const title = document.getElementById("title").value.trim();
       const content = document.getElementById("content").value.trim();
       if (!title || !content) {
@@ -122,47 +182,151 @@
         return;
       }
 
-      const posts = JSON.parse(localStorage.getItem("posts") || "[]");
-      posts.unshift({ title, content, images });
-      localStorage.setItem("posts", JSON.stringify(posts));
-      alert("发布成功！");
-      location.reload();
+      const postData = { 
+        title, 
+        content, 
+        images: [...images],
+        date: new Date().toISOString() 
+      };
+
+      if (editingIndex >= 0) {
+        // 更新现有博客
+        posts[editingIndex] = postData;
+      } else {
+        // 新增博客
+        posts.unshift(postData);
+      }
+
+      try {
+        await updatePostsFile(posts, editingIndex >= 0 ? `更新博客：${title}` : `新增博客：${title}`);
+        alert(editingIndex >= 0 ? "更新成功！" : "发布成功！");
+        resetForm();
+        renderPosts();
+      } catch (err) {
+        alert((editingIndex >= 0 ? "更新" : "发布") + "失败：" + err.message);
+      }
     }
 
-    function loadPostList() {
-      const postList = document.getElementById("postList");
-      const posts = JSON.parse(localStorage.getItem("posts") || "[]");
-      postList.innerHTML = "";
+    // 删除博客并提交
+    async function deletePost(index) {
+      if (!confirm("确定删除该博客吗？")) return;
 
-      posts.forEach((post, index) => {
+      const deletedTitle = posts[index].title;
+      posts.splice(index, 1);
+      try {
+        await updatePostsFile(posts, `删除博客：${deletedTitle}`);
+        alert("删除成功！");
+        renderPosts();
+      } catch (err) {
+        alert("删除失败：" + err.message);
+      }
+    }
+
+    // 编辑博客
+    function editPost(index) {
+      editingIndex = index;
+      const post = posts[index];
+      
+      document.getElementById("title").value = post.title;
+      document.getElementById("content").value = post.content;
+      
+      const preview = document.getElementById("imgPreview");
+      preview.innerHTML = "";
+      images.length = 0;
+      
+      if (post.images && post.images.length) {
+        post.images.forEach(imgSrc => {
+          images.push(imgSrc);
+          const img = document.createElement("img");
+          img.src = imgSrc;
+          preview.appendChild(img);
+        });
+      }
+      
+      document.getElementById("formTitle").textContent = "编辑博客";
+      document.getElementById("submitBtn").textContent = "更新";
+      document.getElementById("cancelBtn").style.display = "inline-block";
+      
+      // 滚动到表单
+      document.querySelector(".form-container").scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // 取消编辑
+    function cancelEdit() {
+      resetForm();
+    }
+
+    // 重置表单
+    function resetForm() {
+      editingIndex = -1;
+      document.getElementById("title").value = "";
+      document.getElementById("content").value = "";
+      document.getElementById("imgUpload").value = "";
+      document.getElementById("imgPreview").innerHTML = "";
+      images.length = 0;
+      
+      document.getElementById("formTitle").textContent = "发布新博客";
+      document.getElementById("submitBtn").textContent = "发布";
+      document.getElementById("cancelBtn").style.display = "none";
+    }
+
+    // 渲染博客列表
+    function renderPosts() {
+      const postList = document.getElementById("postList");
+      postList.innerHTML = "";
+      
+      if (posts.length === 0) {
+        postList.innerHTML = "<p>暂无博客</p>";
+        return;
+      }
+      
+      posts.forEach((post, idx) => {
         const item = document.createElement("div");
         item.className = "post-item";
 
-        const title = document.createElement("div");
-        title.className = "post-title";
-        title.textContent = post.title;
+        const titleDiv = document.createElement("div");
+        titleDiv.className = "post-title";
+        titleDiv.textContent = post.title;
+
+        const actionDiv = document.createElement("div");
+        actionDiv.className = "action-buttons";
+
+        const editBtn = document.createElement("button");
+        editBtn.className = "edit-btn";
+        editBtn.textContent = "编辑";
+        editBtn.onclick = () => editPost(idx);
 
         const delBtn = document.createElement("button");
         delBtn.className = "delete-btn";
         delBtn.textContent = "删除";
-        delBtn.onclick = () => deletePost(index);
+        delBtn.onclick = () => deletePost(idx);
 
-        item.appendChild(title);
-        item.appendChild(delBtn);
+        actionDiv.appendChild(editBtn);
+        actionDiv.appendChild(delBtn);
+        item.appendChild(titleDiv);
+        item.appendChild(actionDiv);
         postList.appendChild(item);
       });
     }
 
-    function deletePost(index) {
-      if (confirm("确定要删除这篇博客吗？")) {
-        const posts = JSON.parse(localStorage.getItem("posts") || "[]");
-        posts.splice(index, 1);
-        localStorage.setItem("posts", JSON.stringify(posts));
-        loadPostList();
-      }
+    // 更新仓库中的 posts.json 文件
+    async function updatePostsFile(newPosts, commitMessage) {
+      const contentStr = JSON.stringify(newPosts, null, 2);
+      const contentBase64 = btoa(unescape(encodeURIComponent(contentStr)));
+
+      const body = {
+        message: commitMessage,
+        content: contentBase64,
+        sha: currentSha,
+        branch: BRANCH
+      };
+
+      const data = await githubRequest(FILE_PATH, currentSha ? 'PUT' : 'POST', body);
+      currentSha = data.content.sha; // 更新最新 sha
     }
 
-    loadPostList();
+    // 页面加载时拉取博客
+    loadPosts();
   </script>
 </body>
 </html>

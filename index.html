@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>科技博客主页</title>
+  <title>ZX-BLOG</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     body {
@@ -11,9 +11,7 @@
       font-family: 'Segoe UI', sans-serif;
       background: #f9f9fb;
     }
-
-        /* 背景彩带 */
-        .ribbons {
+    .ribbons {
       position: fixed;
       top: 0;
       left: 0;
@@ -23,7 +21,6 @@
       z-index: 0;
       pointer-events: none;
     }
-
     .ribbon {
       position: absolute;
       height: 8px;
@@ -33,63 +30,20 @@
       box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
       animation: diagonalMove 16s linear infinite;
     }
-
-    .ribbon:nth-child(1) {
-      width: 300px;
-      top: 10%;
-      left: -400px;
-      background: linear-gradient(135deg, #ff4081, #ff9800);
-      animation-delay: 1s;
-    }
-
-    .ribbon:nth-child(2) {
-      width: 400px;
-      top: 40%;
-      left: -500px;
-      background: linear-gradient(135deg, #00bcd4, #4caf50);
-      animation-delay: 2s;
-    }
-
-    .ribbon:nth-child(3) {
-      width: 500px;
-      top: 70%;
-      left: -600px;
-      background: linear-gradient(135deg, #9c27b0, #03a9f4);
-      animation-delay: 4s;
-    }
-
-    .ribbon:nth-child(4) {
-      width: 350px;
-      top: 25%;
-      left: -550px;
-      background: linear-gradient(135deg, #e91e63, #3f51b5);
-      animation-delay: 6s;
-    }
-
-    .ribbon:nth-child(5) {
-      width: 280px;
-      top: 85%;
-      left: -450px;
-      background: linear-gradient(135deg, #00bcd4, #ffc107);
-      animation-delay: 8s;
-    }
-
+    .ribbon:nth-child(1) { width: 300px; top: 10%; left: -400px; background: linear-gradient(135deg, #ff4081, #ff9800); animation-delay: 1s; }
+    .ribbon:nth-child(2) { width: 400px; top: 40%; left: -500px; background: linear-gradient(135deg, #00bcd4, #4caf50); animation-delay: 2s; }
+    .ribbon:nth-child(3) { width: 500px; top: 70%; left: -600px; background: linear-gradient(135deg, #9c27b0, #03a9f4); animation-delay: 4s; }
+    .ribbon:nth-child(4) { width: 350px; top: 25%; left: -550px; background: linear-gradient(135deg, #e91e63, #3f51b5); animation-delay: 6s; }
+    .ribbon:nth-child(5) { width: 280px; top: 85%; left: -450px; background: linear-gradient(135deg, #00bcd4, #ffc107); animation-delay: 8s; }
     @keyframes diagonalMove {
-      0% {
-        transform: translateX(-200px) translateY(0) rotate(45deg);
-        opacity: 0.4;
-      }
-      100% {
-        transform: translateX(100vw) translateY(100vh) rotate(45deg);
-        opacity: 0.8;
-      }
+      0% { transform: translateX(-200px) translateY(0) rotate(45deg); opacity: 0.4; }
+      100% { transform: translateX(100vw) translateY(100vh) rotate(45deg); opacity: 0.8; }
     }
 
     .container {
       display: flex;
       min-height: 100vh;
     }
-
     .left-panel {
       width: 20%;
       background: #ffffffdd;
@@ -97,7 +51,6 @@
       text-align: center;
       box-shadow: 2px 0 10px rgba(0,0,0,0.05);
     }
-
     .left-panel img {
       width: 120px;
       height: 120px;
@@ -105,19 +58,16 @@
       border: 3px solid #00bcd4;
       object-fit: cover;
     }
-
     .left-panel .name {
       margin-top: 1rem;
       font-size: 1.6rem;
       color: #00bcd4;
     }
-
     .left-panel .bio {
       font-size: 1rem;
       color: #444;
       margin: 0.5rem 0;
     }
-
     .clock {
       font-size: 1.2rem;
       color: #333;
@@ -131,7 +81,6 @@
       flex-wrap: wrap;
       align-content: flex-start;
     }
-
     .post-card {
       width: 28rem;
       background: #ffffff;
@@ -142,23 +91,19 @@
       transition: transform 0.2s;
       cursor: pointer;
     }
-
     .post-card:hover {
       transform: translateY(-4px);
     }
-
     .post-card h3 {
       margin: 0;
       color: #00bcd4;
       font-size: 1.3rem;
     }
-
     .post-card p {
       margin: 0.5rem 0;
       color: #555;
       font-size: 0.95rem;
     }
-
     .thumbnail {
       margin-top: 0.8rem;
       max-height: 150px;
@@ -178,7 +123,6 @@
       align-items: center;
       z-index: 1000;
     }
-
     .modal-content {
       background: #fff;
       padding: 2rem;
@@ -188,11 +132,9 @@
       max-height: 90vh;
       overflow-y: auto;
     }
-
     .modal-content h3 {
       color: #00bcd4;
     }
-
     .modal-content img {
       max-width: 100%;
       border-radius: 6px;
@@ -216,7 +158,6 @@
       <div class="bio">君子坐而论道，少年起而行之</div>
       <div class="clock" id="clock">--:--:--</div>
     </div>
-
     <div class="right-panel" id="posts"></div>
   </div>
 
@@ -235,9 +176,21 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    const posts = JSON.parse(localStorage.getItem("posts") || "[]");
+    // 替换为你自己的 GitHub raw 文件 URL
+    const POSTS_JSON_URL = '/posts.json';
 
-    function renderPosts() {
+    async function fetchPosts() {
+      try {
+        const res = await fetch(POSTS_JSON_URL);
+        if (!res.ok) throw new Error('无法获取数据');
+        const posts = await res.json();
+        renderPosts(posts);
+      } catch (err) {
+        document.getElementById("posts").innerHTML = `<p style="color:red">加载博客失败：${err.message}</p>`;
+      }
+    }
+
+    function renderPosts(posts) {
       const container = document.getElementById("posts");
       container.innerHTML = "";
       posts.forEach(post => {
@@ -266,7 +219,7 @@
       }
     };
 
-    renderPosts();
+    fetchPosts();
   </script>
 </body>
 </html>
