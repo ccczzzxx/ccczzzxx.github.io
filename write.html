@@ -104,11 +104,10 @@
 
   <script>
     // --- 配置部分，替换成你自己的仓库和Token ---
-    const GITHUB_TOKEN = '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'; // 你的 GitHub Token，务必保密！
+    const GITHUB_TOKEN = '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'; // 你的 GitHub Token，务必保密！
     const OWNER = 'ccczzzxx';
     const REPO = 'ccczzzxx.github.io';
     const FILE_PATH = 'posts.json';
-    const BRANCH = 'main'; // 你的仓库分支名
 
     let posts = [];
     let currentSha = null; // 用于更新文件时必须提供最新
@@ -135,7 +134,7 @@
 
     // GitHub API 请求辅助函数
     async function githubRequest(path, method = 'GET', body = null) {
-      const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`;
+      const url = `https://api.github.com/repos/${OWNER}/${REPO}/${path}`;
       const headers = {
         "Authorization": `token ${GITHUB_TOKEN}`,
         "Accept": "application/vnd.github+json",
